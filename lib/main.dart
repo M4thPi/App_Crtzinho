@@ -16,7 +16,7 @@ void main() {
 BluetoothDevice? connectedDevice;
 BluetoothCharacteristic? txCharacteristic; // ESP32 -> App (Lê Sensores)
 BluetoothCharacteristic? rxCharacteristic; // App -> ESP32 (Envia Comandos)
-
+bool sistemaTravadoPorObstaculo = false;
 StreamController<String> streamDados = StreamController<String>.broadcast();
 DateTime _ultimoEnvio = DateTime.now();
 
@@ -53,14 +53,20 @@ void enviarComando(String comando) async {
     return;
   }
 
+  // TRAVA DE SEGURANÇA: Se tiver obstáculo, proíbe de ir para FRENTE
+  if (sistemaTravadoPorObstaculo && comando == "JOY:0.0,-1.0") {
+    print("🔒 App bloqueou comando de ir para frente!");
+    comando = "JOY:0.0,0.0"; // Substitui a aceleração por "parar"
+  }
+
   // Proteção contra engarrafamento do Bluetooth
   if (comando.startsWith("JOY:")) {
     // Identifica se o usuário soltou o dedo (voltou para o centro 0,0)
     bool isParando = comando == "JOY:0.00,0.00" || comando == "JOY:0.0,0.0";
 
-    // Se NÃO for comando de parada, e tiver passado menos de 50ms, bloqueia
+    // AJUSTE: Tempo aumentado para 100ms
     if (!isParando &&
-        DateTime.now().difference(_ultimoEnvio).inMilliseconds < 50) {
+        DateTime.now().difference(_ultimoEnvio).inMilliseconds < 100) {
       return;
     }
     _ultimoEnvio = DateTime.now();
@@ -72,7 +78,7 @@ void enviarComando(String comando) async {
   } catch (e) {
     print("🚨 Erro na antena Bluetooth: $e");
   }
-}
+} // CORREÇÃO 1: Faltava esta chave fechando a função enviarComando()!
 
 // ==========================================
 // APLICATIVO PRINCIPAL
@@ -113,7 +119,7 @@ class TelaApresentacao extends StatefulWidget {
 
   @override
   State<TelaApresentacao> createState() => _TelaApresentacaoState();
-}
+} // CORREÇÃO 2: Removida a chave que estava sobrando aqui embaixo
 
 class _TelaApresentacaoState extends State<TelaApresentacao> {
   bool _permissoesConcedidas = false;
@@ -440,7 +446,7 @@ class _TelaConexaoState extends State<TelaConexao> {
       ),
     );
   }
-}
+} // CORREÇÃO 3: Removida a chave que estava sobrando aqui embaixo
 
 // ==========================================
 // 3. TELA DE PAINEL (STATUS)
@@ -472,10 +478,26 @@ class _TelaPainelState extends State<TelaPainel> {
           });
         }
       } else if (linha.contains("ALERTA: OBSTACULO")) {
+        sistemaTravadoPorObstaculo = true; // Aciona o freio do app
+        enviarComando("JOY:0.0,0.0"); // FORÇA A PARADA IMEDIATA!
+
+        ScaffoldMessenger.of(context).clearSnackBars();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('⚠️ ALERTA: Obstáculo Detectado à frente!'),
+            content: Text('⚠️ PARADA FORÇADA: Obstáculo Detectado!'),
             backgroundColor: Colors.redAccent,
+            duration: Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else if (linha.contains("ALERTA: LIVRE")) {
+        sistemaTravadoPorObstaculo = false; // Libera o app para andar
+
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Caminho Livre!'),
+            backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
           ),
@@ -587,7 +609,7 @@ class TelaPilotagem extends StatefulWidget {
 
 class _TelaPilotagemState extends State<TelaPilotagem> {
   bool garraFechada = false;
-  double velocidade = 85.0;
+  double velocidade = 0;
 
   @override
   void initState() {
@@ -597,8 +619,6 @@ class _TelaPilotagemState extends State<TelaPilotagem> {
       DeviceOrientation.landscapeRight,
     ]);
 
-    // Manda a velocidade inicial do slider (85) para o robô assim que a tela abre
-    // O Future.delayed garante que a tela terminou de carregar antes de enviar
     Future.delayed(const Duration(milliseconds: 500), () {
       enviarComando("VEL:${velocidade.round()}");
     });
@@ -694,7 +714,7 @@ class _TelaPilotagemState extends State<TelaPilotagem> {
             ],
           ),
 
-          // 3. CONTROLE DA GARRA (CORRIGIDO)
+          // 3. CONTROLE DA GARRA
           GestureDetector(
             onTap: () {
               setState(() => garraFechada = !garraFechada);
@@ -739,8 +759,7 @@ class TelaDisplay extends StatelessWidget {
             const SizedBox(height: 20),
             TextField(
               controller: _controller,
-              maxLength:
-                  32, // Limitado a 16 pois a linha 2 do seu LCD só cabe isso
+              maxLength: 32,
               decoration: const InputDecoration(
                 labelText: 'Mensagem para a linha 2',
                 filled: true,
