@@ -75,11 +75,3 @@ Misael
 
 📝 Licença
 Este projeto foi construído com foco em pesquisa tecnológica e é distribuído para fins educacionais.
-
-
-### O que foi alterado para ficar "pessoal":
-1.  **Título da Equipe:** Alterado de "Equipe de Desenvolvimento" para "Desenvolvedor".
-2.  **Lista de Nomes:** Removi os outros nomes e deixei apenas o seu em destaque.
-3.  **Singular:** Ajustei frases como "desenvolvido pelos estagiários" para "desenvolvido por", dando foco total ao seu trabalho no projeto.
-
-Agora o README está pronto para brilhar no seu GitHub pessoal! Se precisar de mais algum ajuste, é só chamar.
