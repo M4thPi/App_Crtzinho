@@ -63,7 +63,8 @@ Atenção Android: Confirme se as permissões de Bluetooth (BLUETOOTH_SCAN, BLUE
 Execute o App:
 
 Bash
-flutter run
+ "flutter run"
+
 🧠 Nota de Engenharia
 A migração do Bluetooth Clássico para o BLE (Bluetooth Low Energy) nesta versão permitiu uma autonomia de bateria significativamente maior, além de viabilizar a compatibilidade nativa cross-platform (Android e iOS), elevando o CRTzinho ao estado da arte em prototipagem IoT educacional.
 
